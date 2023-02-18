@@ -1,10 +1,5 @@
-import {
-  Signal,
-  signal,
-  useComputed,
-  useSignal,
-} from "@preact/signals";
-import { useCallback, useState } from "preact/hooks";
+import { Signal, signal, useComputed, useSignal } from "@preact/signals";
+import { useCallback, useEffect, useState } from "preact/hooks";
 import { JSXInternal } from "preact/src/jsx";
 
 type ListItemTemplate = {
@@ -26,8 +21,9 @@ const generateRandomName = (): ListItem => {
   return { ...possibleNames[random], id: Math.random() * 1000 };
 };
 
-const ListItem = ({ item: { lastname, name } }: { item: ListItem }) => {
-  return <p>{`${lastname}, ${name}`}</p>;
+const ListItem = (props: { item: ListItem }) => {
+  //console.count('item', JSON.stringify(props))
+  return <p>{`${props.item.lastname}, ${props.item.name}`}</p>;
 };
 
 const For = <TProps,>({
@@ -38,12 +34,24 @@ const For = <TProps,>({
   signalArray: Signal<TProps[]>;
 }) => {
   console.count("rerender for component");
-  const array = useComputed(() =>
-    signalArray.value.map((props) => {
-      return <>{children(props)}</>;
+  const eachChildren = useComputed(() => {
+    return (
+      <>
+        {signalArray.value.map((props) => {
+          return <>{children(props)}</>;
+        })}
+      </>
+    );
+  });
+  useEffect(() => {
+    const t = eachChildren.subscribe((i) => {
+      console.warn(i)
     })
-  );
-  return <>{array}</>;
+    return () => t();
+  }, []);
+  return <>{eachChildren}</>;
+  //return <>{testSignal} {eachChildren}</>;
+  //return <>Bokkk</>;
 };
 
 const ForSignal = () => {
@@ -96,7 +104,6 @@ const rerenderCountSignal = signal(0);
 const rerenderCountState = signal(0);
 
 const incrementCount = (count: "signal" | "state") => () => {
-  console.count("rerender: ", count);
   if (count === "signal") {
     if (rerenderCountSignal.value < 10) {
       rerenderCountSignal.value++;
