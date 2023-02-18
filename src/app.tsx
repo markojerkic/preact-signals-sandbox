@@ -1,5 +1,12 @@
-import { Signal, signal, useComputed, useSignal } from "@preact/signals";
-import { useCallback, useEffect, useState } from "preact/hooks";
+import {
+  batch,
+  Signal,
+  signal,
+  useComputed,
+  useSignal,
+  useSignalEffect,
+} from "@preact/signals";
+import { Ref, useCallback, useEffect, useRef, useState } from "preact/hooks";
 import { JSXInternal } from "preact/src/jsx";
 
 type ListItemTemplate = {
@@ -16,42 +23,56 @@ const possibleNames: ListItemTemplate[] = [
 ];
 
 const generateRandomName = (): ListItem => {
-  const random = Math.floor(Math.random() * possibleNames.length);
+  let random = possibleNames[Math.floor(Math.random() * possibleNames.length)];
 
-  return { ...possibleNames[random], id: Math.random() * 1000 };
+  while (!random) {
+    random = possibleNames[Math.floor(Math.random() * possibleNames.length)];
+  }
+
+  return { ...random, id: Math.random() * 1000 };
 };
 
 const ListItem = (props: { item: ListItem }) => {
-  //console.count('item', JSON.stringify(props))
+  //console.log('item', props.item.id)
   return <p>{`${props.item.lastname}, ${props.item.name}`}</p>;
 };
 
+type NodeRef<TProps> = { ref: Ref<JSXInternal.Element> | null; props: TProps };
 const For = <TProps,>({
-  children,
+  children: Child,
   signalArray,
 }: {
   children: (props: TProps) => JSXInternal.Element;
   signalArray: Signal<TProps[]>;
 }) => {
-  console.count("rerender for component");
-  const eachChildren = useComputed(() => {
-    return (
-      <>
-        {signalArray.value.map((props) => {
-          return <>{children(props)}</>;
-        })}
-      </>
-    );
+  const refs = useSignal<NodeRef<TProps>[]>(signalArray.value.map(item => ({ props: item, ref: null })));
+  console.log('rerender for')
+
+  useSignalEffect(() => {
+    const signalArrayCopy = signalArray.value;
+    const refsCopy = refs.value;
+    for (let [index, childItemProp] of signalArrayCopy.entries()) {
+      let nodeValue = refs.value[index];
+      if (nodeValue) {
+        if (nodeValue.props !== signalArrayCopy[index]) {
+          refsCopy[index]!.props = childItemProp;
+        }
+      } else {
+        nodeValue = { props: childItemProp, ref: null };
+        refsCopy.push(nodeValue);
+      }
+    }
+
+    refs.value = refsCopy;
   });
-  useEffect(() => {
-    const t = eachChildren.subscribe((i) => {
-      console.warn(i)
-    })
-    return () => t();
-  }, []);
-  return <>{eachChildren}</>;
-  //return <>{testSignal} {eachChildren}</>;
-  //return <>Bokkk</>;
+
+  return (
+    <div>
+      {refs.value.map(({ ref, props }) => {
+        return <Child key={ref} ref={ref} {...props} />;
+      })}
+    </div>
+  );
 };
 
 const ForSignal = () => {
@@ -115,11 +136,37 @@ const incrementCount = (count: "signal" | "state") => () => {
   }
 };
 
+/*
+const TestRender = () => {
+  const testComp = useSignal(<p>prvi render</p>);
+  const ref = useRef<HTMLElement | HTMLDivElement>(null);
+
+  useSignalEffect(() => {
+    const t = ref.current;
+    if (!!t) {
+      //ref.cu = testComp.value.ref;
+    }
+  });
+
+  useSignalEffect(() => {
+    const i = setInterval(() => {
+      testComp.value = <p>{Math.random()}</p>;
+    }, 1000);
+    return () => clearInterval(i);
+  });
+
+  return <div ref={ref as any}>{testComp.value}</div>;
+};
+  */
+
 export function App() {
   console.log("rerender app");
 
   return (
     <div class="bg-zinc-800 grid grid-cols-2 content-start gap-2 place-content-center w-full h-full min-h-screen text-white p-4">
+      {/*
+      <TestRender />
+*/}
       <p class="border border-white p-2 max-w-fit">
         State rerendered: {rerenderCountState}
       </p>
