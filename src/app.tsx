@@ -6,7 +6,7 @@ import {
   useSignal,
   useSignalEffect,
 } from "@preact/signals";
-import { h, hydrate } from "preact";
+import { h, hydrate, render } from "preact";
 import { Ref, useCallback, useEffect, useRef, useState } from "preact/hooks";
 import { JSXInternal } from "preact/src/jsx";
 
@@ -33,29 +33,47 @@ const generateRandomName = (): ListItem => {
   return { ...random, id: Math.random() * 1000 };
 };
 
-const ListItem = (props: { item: ListItem }) => {
-  return <p>{`${props.item.lastname}, ${props.item.name}`}</p>;
+const ListItem = (props: { item: ListItem; remove: () => void }) => {
+  return (
+    <div class="flex flex-row justify-between space-y-2 max-w-2">
+      <p>{`${props.item.id} - ${props.item.lastname}, ${props.item.name}`}</p>
+      <button class="bg-fuchsia-500 p-2 rounded-md" onClick={props.remove}>
+        Remove me
+      </button>
+    </div>
+  );
 };
 
 const For = <TProps,>({
   children,
   signalArray,
+  className,
+  class: clazz,
 }: {
   children: (props: TProps) => JSXInternal.Element;
   signalArray: Signal<TProps[]>;
+  className?: string;
+  class?: string;
 }) => {
-  const parentRef = useRef(null);
+  console.count("for reredner");
+  const parentRef = useRef<HTMLElement>(null);
 
   useSignalEffect(() => {
     const eachChildren = signalArray.value.map((props) => (
       <>{children(props)}</>
     ));
+    console.log("children count", signalArray.value.length);
     if (parentRef.current) {
-      hydrate(eachChildren, parentRef.current);
+      //hydrate(eachChildren, parentRef.current);
+      render(
+        eachChildren,
+        parentRef.current,
+        parentRef.current.children as unknown as Element
+      );
     }
   });
 
-  return <div ref={parentRef} />;
+  return <div class={clazz ?? className} ref={parentRef as any} />;
 };
 
 const ForSignal = () => {
@@ -68,7 +86,16 @@ const ForSignal = () => {
 
   return (
     <div class="space-y-2">
-      <For signalArray={items}>{(item) => <ListItem item={item} />}</For>
+      <For signalArray={items}>
+        {(item) => (
+          <ListItem
+            item={item}
+            remove={() =>
+              (items.value = items.value.filter((i) => i.id !== item.id))
+            }
+          />
+        )}
+      </For>
       <button
         class="bg-fuchsia-800 rounded-lg p-1"
         onClick={() => (items.value = [...items.value, generateRandomName()])}
@@ -95,7 +122,11 @@ const ForState = () => {
   return (
     <div class="space-y-2">
       {items.map((item) => (
-        <ListItem key={item.id} item={item} />
+        <ListItem
+          key={item.id}
+          item={item}
+          remove={() => setItems(items.filter((i) => i.id !== item.id))}
+        />
       ))}
       <button class="bg-fuchsia-800 rounded-lg p-1" onClick={addNewName}>
         Add new name to the list
