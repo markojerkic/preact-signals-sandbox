@@ -6,6 +6,7 @@ import {
   useSignal,
   useSignalEffect,
 } from "@preact/signals";
+import { h, hydrate } from "preact";
 import { Ref, useCallback, useEffect, useRef, useState } from "preact/hooks";
 import { JSXInternal } from "preact/src/jsx";
 
@@ -33,7 +34,6 @@ const generateRandomName = (): ListItem => {
 };
 
 const ListItem = (props: { item: ListItem }) => {
-  //console.log('item', props.item.id)
   return <p>{`${props.item.lastname}, ${props.item.name}`}</p>;
 };
 
@@ -45,8 +45,10 @@ const For = <TProps,>({
   children: (props: TProps) => JSXInternal.Element;
   signalArray: Signal<TProps[]>;
 }) => {
-  const refs = useSignal<NodeRef<TProps>[]>(signalArray.value.map(item => ({ props: item, ref: null })));
-  console.log('rerender for')
+  const refs = useSignal<NodeRef<TProps>[]>(
+    signalArray.value.map((item) => ({ props: item, ref: null }))
+  );
+  console.log("rerender for");
 
   useSignalEffect(() => {
     const signalArrayCopy = signalArray.value;
@@ -136,37 +138,39 @@ const incrementCount = (count: "signal" | "state") => () => {
   }
 };
 
-/*
 const TestRender = () => {
-  const testComp = useSignal(<p>prvi render</p>);
-  const ref = useRef<HTMLElement | HTMLDivElement>(null);
-
-  useSignalEffect(() => {
-    const t = ref.current;
-    if (!!t) {
-      //ref.cu = testComp.value.ref;
-    }
-  });
+  console.count("test rerender");
+  const testComp = useSignal([1, 2, 3, 4]);
+  const parentRef = useRef<HTMLElement | HTMLDivElement>(null);
 
   useSignalEffect(() => {
     const i = setInterval(() => {
-      testComp.value = <p>{Math.random()}</p>;
+      testComp.value = [
+        Math.random(),
+        Math.random(),
+        Math.random(),
+        Math.random(),
+      ];
     }, 1000);
     return () => clearInterval(i);
   });
 
-  return <div ref={ref as any}>{testComp.value}</div>;
+  useSignalEffect(() => {
+    const items = testComp.value.map((i) => <div>{i}</div>);
+    if (parentRef.current) {
+      hydrate(items, parentRef.current);
+    }
+  });
+
+  return <div ref={parentRef as any} class="bg-violet-600 p-2"></div>;
 };
-  */
 
 export function App() {
   console.log("rerender app");
 
   return (
     <div class="bg-zinc-800 grid grid-cols-2 content-start gap-2 place-content-center w-full h-full min-h-screen text-white p-4">
-      {/*
-      <TestRender />
-*/}
+      {/*<TestRender /> */}
       <p class="border border-white p-2 max-w-fit">
         State rerendered: {rerenderCountState}
       </p>
