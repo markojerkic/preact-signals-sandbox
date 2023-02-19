@@ -62,9 +62,7 @@ const For = <TProps,>({
     const eachChildren = signalArray.value.map((props) => (
       <>{children(props)}</>
     ));
-    console.log("children count", signalArray.value.length);
     if (parentRef.current) {
-      //hydrate(eachChildren, parentRef.current);
       render(
         eachChildren,
         parentRef.current,
@@ -77,12 +75,11 @@ const For = <TProps,>({
 };
 
 const ForSignal = () => {
+  incrementCount("signal")();
   const items = useSignal<ListItem[]>([
     generateRandomName(),
     generateRandomName(),
   ]);
-
-  console.count("rerender signal");
 
   return (
     <div class="space-y-2">
@@ -107,7 +104,7 @@ const ForSignal = () => {
 };
 
 const ForState = () => {
-  //incrementCount("state")();
+  incrementCount("state")();
   const [items, setItems] = useState<ListItem[]>([
     generateRandomName(),
     generateRandomName(),
@@ -116,8 +113,6 @@ const ForState = () => {
   const addNewName = useCallback(() => {
     setItems([...items, generateRandomName()]);
   }, [setItems, items]);
-
-  console.count("rerender state");
 
   return (
     <div class="space-y-2">
@@ -136,45 +131,30 @@ const ForState = () => {
 };
 
 const rerenderCountSignal = signal(0);
+let rerenderCountSignalV = { count: 0 };
+let rerenderCountSignalProxy = new Proxy(rerenderCountSignalV, {
+  set: (target: any, property: any, value: any, _: any) => {
+    rerenderCountSignal.value = value;
+    target[property] = value;
+    return true;
+  },
+});
 const rerenderCountState = signal(0);
+let rerenderCountStateV = {count: 0};
+let rerenderCountStateProxy = new Proxy(rerenderCountStateV, {
+  set: (target: any, property: any, value: any, _: any) => {
+    rerenderCountState.value = value;
+    target[property] = value;
+    return true;
+  },
+});
 
 const incrementCount = (count: "signal" | "state") => () => {
   if (count === "signal") {
-    if (rerenderCountSignal.value < 10) {
-      rerenderCountSignal.value++;
-    }
+    rerenderCountSignalProxy.count++;
   } else if (count === "state") {
-    if (rerenderCountState.value < 10) {
-      rerenderCountState.value++;
-    }
+    rerenderCountStateProxy.count++
   }
-};
-
-const TestRender = () => {
-  console.count("test rerender");
-  const testComp = useSignal([1, 2, 3, 4]);
-  const parentRef = useRef<HTMLElement | HTMLDivElement>(null);
-
-  useSignalEffect(() => {
-    const i = setInterval(() => {
-      testComp.value = [
-        Math.random(),
-        Math.random(),
-        Math.random(),
-        Math.random(),
-      ];
-    }, 1000);
-    return () => clearInterval(i);
-  });
-
-  useSignalEffect(() => {
-    const items = testComp.value.map((i) => <div>{i}</div>);
-    if (parentRef.current) {
-      hydrate(items, parentRef.current);
-    }
-  });
-
-  return <div ref={parentRef as any} class="bg-violet-600 p-2"></div>;
 };
 
 export function App() {
@@ -182,7 +162,6 @@ export function App() {
 
   return (
     <div class="bg-zinc-800 grid grid-cols-2 content-start gap-2 place-content-center w-full h-full min-h-screen text-white p-4">
-      {/*<TestRender /> */}
       <p class="border border-white p-2 max-w-fit">
         State rerendered: {rerenderCountState}
       </p>
