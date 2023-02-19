@@ -1,13 +1,11 @@
 import {
-  batch,
   Signal,
   signal,
-  useComputed,
   useSignal,
   useSignalEffect,
 } from "@preact/signals";
-import { h, hydrate, render } from "preact";
-import { Ref, useCallback, useEffect, useRef, useState } from "preact/hooks";
+import { render } from "preact";
+import { useCallback, useRef, useState } from "preact/hooks";
 import { JSXInternal } from "preact/src/jsx";
 
 type ListItemTemplate = {
