@@ -37,44 +37,25 @@ const ListItem = (props: { item: ListItem }) => {
   return <p>{`${props.item.lastname}, ${props.item.name}`}</p>;
 };
 
-type NodeRef<TProps> = { ref: Ref<JSXInternal.Element> | null; props: TProps };
 const For = <TProps,>({
-  children: Child,
+  children,
   signalArray,
 }: {
   children: (props: TProps) => JSXInternal.Element;
   signalArray: Signal<TProps[]>;
 }) => {
-  const refs = useSignal<NodeRef<TProps>[]>(
-    signalArray.value.map((item) => ({ props: item, ref: null }))
-  );
-  console.log("rerender for");
+  const parentRef = useRef(null);
 
   useSignalEffect(() => {
-    const signalArrayCopy = signalArray.value;
-    const refsCopy = refs.value;
-    for (let [index, childItemProp] of signalArrayCopy.entries()) {
-      let nodeValue = refs.value[index];
-      if (nodeValue) {
-        if (nodeValue.props !== signalArrayCopy[index]) {
-          refsCopy[index]!.props = childItemProp;
-        }
-      } else {
-        nodeValue = { props: childItemProp, ref: null };
-        refsCopy.push(nodeValue);
-      }
+    const eachChildren = signalArray.value.map((props) => (
+      <>{children(props)}</>
+    ));
+    if (parentRef.current) {
+      hydrate(eachChildren, parentRef.current);
     }
-
-    refs.value = refsCopy;
   });
 
-  return (
-    <div>
-      {refs.value.map(({ ref, props }) => {
-        return <Child key={ref} ref={ref} {...props} />;
-      })}
-    </div>
-  );
+  return <div ref={parentRef} />;
 };
 
 const ForSignal = () => {
